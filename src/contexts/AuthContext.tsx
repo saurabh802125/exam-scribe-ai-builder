@@ -1,5 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User } from "@supabase/supabase-js";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Educator {
   id: string;
@@ -13,9 +16,10 @@ interface Educator {
 interface AuthContextType {
   currentUser: Educator | null;
   isAuthenticated: boolean;
+  session: Session | null;
   login: (email: string, password: string) => Promise<boolean>;
   register: (userData: RegisterData) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 interface RegisterData {
@@ -39,107 +43,167 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<Educator | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Check local storage for user data on initial load
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
-    }
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state changed:", event, session);
+        setSession(session);
+        if (session?.user) {
+          fetchUserProfile(session.user);
+          setIsAuthenticated(true);
+        } else {
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        fetchUserProfile(session.user);
+        setIsAuthenticated(true);
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Mock login function (would connect to backend in real implementation)
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // In a real app, this would make an API call to verify credentials
-    // For now, we'll use mock data for demonstration
+  const fetchUserProfile = async (user: User) => {
     try {
-      // Mock successful login for "test@example.com" with password "password"
-      if (email === "test@example.com" && password === "password") {
-        const user = {
-          id: "1",
-          name: "Test Educator",
-          email: "test@example.com",
-          department: "Computer Science",
-          semester: "4",
-          courses: ["ML", "ACN", "DBMS"]
-        };
-        
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        localStorage.setItem("user", JSON.stringify(user));
-        return true;
+      // Get user profile data
+      const { data: educator, error } = await supabase
+        .from('educators')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching educator profile:", error);
+        return;
       }
-      
-      // Check localStorage for registered users
-      const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
-      const user = registeredUsers.find((u: any) => u.email === email && u.password === password);
-      
-      if (user) {
-        const userData = {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          department: user.department,
-          semester: user.semester,
-          courses: user.courses
-        };
-        
-        setCurrentUser(userData);
-        setIsAuthenticated(true);
-        localStorage.setItem("user", JSON.stringify(userData));
-        return true;
+
+      // Get educator courses
+      const { data: courseData, error: courseError } = await supabase
+        .from('educator_courses')
+        .select('courses(code)')
+        .eq('educator_id', user.id);
+
+      if (courseError) {
+        console.error("Error fetching educator courses:", courseError);
+        return;
       }
-      
-      return false;
+
+      // Extract course codes
+      const courses = courseData.map(item => item.courses.code);
+
+      // Set current user with educator data and courses
+      setCurrentUser({
+        id: educator.id,
+        name: educator.name,
+        email: educator.email,
+        department: educator.department,
+        semester: educator.semester,
+        courses: courses
+      });
     } catch (error) {
-      console.error("Login error:", error);
-      return false;
+      console.error("Error in fetchUserProfile:", error);
     }
   };
 
-  // Mock register function
-  const register = async (userData: RegisterData): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // In a real app, this would make an API call to register the user
-      const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
-      
-      // Check if email already exists
-      if (registeredUsers.some((user: any) => user.email === userData.email)) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error("Login error:", error.message);
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
         return false;
       }
-      
-      // Create new user with ID
-      const newUser = {
-        ...userData,
-        id: `user-${Date.now()}`
-      };
-      
-      // Add to registered users
-      registeredUsers.push(newUser);
-      localStorage.setItem("registeredUsers", JSON.stringify(registeredUsers));
-      
+
       return true;
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Unexpected login error:", error);
       return false;
     }
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem("user");
+  const register = async (userData: RegisterData): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+            department: userData.department,
+            semester: userData.semester,
+            courses: userData.courses
+          }
+        }
+      });
+
+      if (error) {
+        console.error("Registration error:", error.message);
+        toast({
+          title: "Registration failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      toast({
+        title: "Registration successful",
+        description: "Your account has been created. You can now log in.",
+      });
+      return true;
+    } catch (error) {
+      console.error("Unexpected registration error:", error);
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setCurrentUser(null);
+      setSession(null);
+      setIsAuthenticated(false);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const value = {
     currentUser,
     isAuthenticated,
+    session,
     login,
     register,
     logout
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {!isLoading && children}
+    </AuthContext.Provider>
+  );
 }

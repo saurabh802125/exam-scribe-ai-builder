@@ -8,6 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { useState } from "react";
 import { LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Course {
+  id: string;
+  name: string;
+  code: string;
+}
 
 const Dashboard = () => {
   const { currentUser, isAuthenticated, logout } = useAuth();
@@ -17,15 +24,61 @@ const Dashboard = () => {
   const [examType, setExamType] = useState("");
   const [semester, setSemester] = useState("");
   const [course, setCourse] = useState("");
+  const [userCourses, setUserCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
+      return;
     }
-  }, [isAuthenticated, navigate]);
 
-  const handleLogout = () => {
-    logout();
+    const fetchUserCourses = async () => {
+      if (!currentUser) return;
+
+      try {
+        setIsLoading(true);
+        // Get the user's course IDs
+        const { data: coursesData, error: coursesError } = await supabase
+          .from('educator_courses')
+          .select('course_id')
+          .eq('educator_id', currentUser.id);
+
+        if (coursesError) {
+          console.error("Error fetching course IDs:", coursesError);
+          return;
+        }
+
+        if (!coursesData || coursesData.length === 0) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Get course details
+        const courseIds = coursesData.map(item => item.course_id);
+        const { data: fullCoursesData, error: fullCoursesError } = await supabase
+          .from('courses')
+          .select('*')
+          .in('id', courseIds);
+
+        if (fullCoursesError) {
+          console.error("Error fetching course details:", fullCoursesError);
+          return;
+        }
+
+        setUserCourses(fullCoursesData || []);
+      } catch (error) {
+        console.error("Error in fetchUserCourses:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserCourses();
+  }, [isAuthenticated, currentUser, navigate]);
+
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
@@ -53,8 +106,20 @@ const Dashboard = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   if (!currentUser) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Please log in to access this page.</p>
+      </div>
+    );
   }
 
   return (
@@ -137,25 +202,11 @@ const Dashboard = () => {
                         <SelectValue placeholder="Select course" />
                       </SelectTrigger>
                       <SelectContent>
-                        {currentUser.courses.map((courseId) => {
-                          // Map course IDs to full names for display
-                          const courseMap: Record<string, string> = {
-                            "ML": "Machine Learning",
-                            "ACN": "Advanced Computer Networks",
-                            "DCN": "Data Communication Networks", 
-                            "DL": "Deep Learning",
-                            "DS": "Data Structures",
-                            "DBMS": "Database Management Systems",
-                            "AI": "Artificial Intelligence",
-                            "OS": "Operating Systems"
-                          };
-                          
-                          return (
-                            <SelectItem key={courseId} value={courseId}>
-                              {courseMap[courseId] || courseId}
-                            </SelectItem>
-                          );
-                        })}
+                        {userCourses.map((course) => (
+                          <SelectItem key={course.id} value={course.code}>
+                            {course.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

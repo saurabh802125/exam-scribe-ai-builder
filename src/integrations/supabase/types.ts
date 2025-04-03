@@ -9,7 +9,123 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      courses: {
+        Row: {
+          code: string
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      educator_courses: {
+        Row: {
+          course_id: string
+          educator_id: string
+        }
+        Insert: {
+          course_id: string
+          educator_id: string
+        }
+        Update: {
+          course_id?: string
+          educator_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "educator_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "educator_courses_educator_id_fkey"
+            columns: ["educator_id"]
+            isOneToOne: false
+            referencedRelation: "educators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      educators: {
+        Row: {
+          created_at: string
+          department: string
+          email: string
+          id: string
+          name: string
+          semester: string
+        }
+        Insert: {
+          created_at?: string
+          department: string
+          email: string
+          id: string
+          name: string
+          semester: string
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          email?: string
+          id?: string
+          name?: string
+          semester?: string
+        }
+        Relationships: []
+      }
+      exams: {
+        Row: {
+          course_id: string
+          created_at: string
+          educator_id: string
+          exam_type: string
+          id: string
+          semester: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          educator_id: string
+          exam_type: string
+          id?: string
+          semester: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          educator_id?: string
+          exam_type?: string
+          id?: string
+          semester?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exams_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exams_educator_id_fkey"
+            columns: ["educator_id"]
+            isOneToOne: false
+            referencedRelation: "educators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

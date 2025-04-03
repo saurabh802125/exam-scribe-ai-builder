@@ -9,17 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
-const availableCourses = [
-  { id: "ML", name: "Machine Learning" },
-  { id: "ACN", name: "Advanced Computer Networks" },
-  { id: "DCN", name: "Data Communication Networks" },
-  { id: "DL", name: "Deep Learning" },
-  { id: "DS", name: "Data Structures" },
-  { id: "DBMS", name: "Database Management Systems" },
-  { id: "AI", name: "Artificial Intelligence" },
-  { id: "OS", name: "Operating Systems" },
-];
+interface Course {
+  id: string;
+  name: string;
+  code: string;
+}
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -31,12 +28,35 @@ const Register = () => {
     semester: "",
   });
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   
   const { register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Fetch courses from Supabase
+    const fetchCourses = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('courses')
+          .select('*');
+        
+        if (error) {
+          console.error("Error fetching courses:", error);
+          return;
+        }
+        
+        setAvailableCourses(data || []);
+      } catch (error) {
+        console.error("Error in fetchCourses:", error);
+      }
+    };
+    
+    fetchCourses();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -52,11 +72,11 @@ const Register = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const toggleCourse = (courseId: string) => {
+  const toggleCourse = (courseCode: string) => {
     setSelectedCourses(prev => 
-      prev.includes(courseId)
-        ? prev.filter(id => id !== courseId)
-        : [...prev, courseId]
+      prev.includes(courseCode)
+        ? prev.filter(code => code !== courseCode)
+        : [...prev, courseCode]
     );
   };
 
@@ -103,19 +123,10 @@ const Register = () => {
       });
       
       if (success) {
-        toast({
-          title: "Registration successful",
-          description: "Your account has been created. Please login.",
-        });
         navigate("/login");
-      } else {
-        toast({
-          title: "Registration failed",
-          description: "This email may already be registered. Please try another.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
+      console.error("Registration error:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -242,12 +253,12 @@ const Register = () => {
                   {availableCourses.map(course => (
                     <div key={course.id} className="flex items-center space-x-2">
                       <Checkbox 
-                        id={`course-${course.id}`}
-                        checked={selectedCourses.includes(course.id)}
-                        onCheckedChange={() => toggleCourse(course.id)}
+                        id={`course-${course.code}`}
+                        checked={selectedCourses.includes(course.code)}
+                        onCheckedChange={() => toggleCourse(course.code)}
                       />
                       <label 
-                        htmlFor={`course-${course.id}`}
+                        htmlFor={`course-${course.code}`}
                         className="text-sm cursor-pointer"
                       >
                         {course.name}

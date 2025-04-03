@@ -28,14 +28,9 @@ const Login = () => {
           description: "Welcome back to Exam-Scribe AI",
         });
         navigate("/dashboard");
-      } else {
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password. Please try again.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
