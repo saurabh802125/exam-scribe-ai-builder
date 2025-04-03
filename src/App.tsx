@@ -9,9 +9,11 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 import CieExamSetup from "./pages/CieExamSetup";
 import SemesterExamSetup from "./pages/SemesterExamSetup";
 import GenerateQuestions from "./pages/GenerateQuestions";
+import ResetPassword from "./pages/ResetPassword";
 import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
@@ -27,7 +29,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/cie-exam-setup" element={<CieExamSetup />} />
             <Route path="/semester-exam-setup" element={<SemesterExamSetup />} />
             <Route path="/generate-questions" element={<GenerateQuestions />} />

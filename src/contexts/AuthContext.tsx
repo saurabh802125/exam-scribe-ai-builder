@@ -1,35 +1,10 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Session, User } from "@supabase/supabase-js";
+import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/components/ui/use-toast";
-
-interface Educator {
-  id: string;
-  name: string;
-  email: string;
-  department: string;
-  semester: string;
-  courses: string[];
-}
-
-interface AuthContextType {
-  currentUser: Educator | null;
-  isAuthenticated: boolean;
-  session: Session | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (userData: RegisterData) => Promise<boolean>;
-  logout: () => Promise<void>;
-}
-
-interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  department: string;
-  semester: string;
-  courses: string[];
-}
+import { fetchUserProfile } from "@/utils/authUtils";
+import { AuthContextType, Educator, RegisterData } from "@/types/auth";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -55,8 +30,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("Auth state changed:", event, session);
         setSession(session);
         if (session?.user) {
-          fetchUserProfile(session.user);
-          setIsAuthenticated(true);
+          fetchUserProfile(session.user).then(profile => {
+            if (profile) {
+              setCurrentUser(profile);
+              setIsAuthenticated(true);
+            }
+          });
         } else {
           setCurrentUser(null);
           setIsAuthenticated(false);
@@ -68,8 +47,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        fetchUserProfile(session.user);
-        setIsAuthenticated(true);
+        fetchUserProfile(session.user).then(profile => {
+          if (profile) {
+            setCurrentUser(profile);
+            setIsAuthenticated(true);
+          }
+        });
       }
       setIsLoading(false);
     });
@@ -78,48 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
-
-  const fetchUserProfile = async (user: User) => {
-    try {
-      // Get user profile data
-      const { data: educator, error } = await supabase
-        .from('educators')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error("Error fetching educator profile:", error);
-        return;
-      }
-
-      // Get educator courses
-      const { data: courseData, error: courseError } = await supabase
-        .from('educator_courses')
-        .select('courses(code)')
-        .eq('educator_id', user.id);
-
-      if (courseError) {
-        console.error("Error fetching educator courses:", courseError);
-        return;
-      }
-
-      // Extract course codes
-      const courses = courseData.map(item => item.courses.code);
-
-      // Set current user with educator data and courses
-      setCurrentUser({
-        id: educator.id,
-        name: educator.name,
-        email: educator.email,
-        department: educator.department,
-        semester: educator.semester,
-        courses: courses
-      });
-    } catch (error) {
-      console.error("Error in fetchUserProfile:", error);
-    }
-  };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {

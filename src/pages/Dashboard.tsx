@@ -1,225 +1,141 @@
 
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
-import { useState } from "react";
-import { LogOut } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-
-interface Course {
-  id: string;
-  name: string;
-  code: string;
-}
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { UserCircle, Book, CalendarCheck, FileQuestion, LogOut } from "lucide-react";
 
 const Dashboard = () => {
   const { currentUser, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   
-  const [examType, setExamType] = useState("");
-  const [semester, setSemester] = useState("");
-  const [course, setCourse] = useState("");
-  const [userCourses, setUserCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
-      return;
     }
-
-    const fetchUserCourses = async () => {
-      if (!currentUser) return;
-
-      try {
-        setIsLoading(true);
-        // Get the user's course IDs
-        const { data: coursesData, error: coursesError } = await supabase
-          .from('educator_courses')
-          .select('course_id')
-          .eq('educator_id', currentUser.id);
-
-        if (coursesError) {
-          console.error("Error fetching course IDs:", coursesError);
-          return;
-        }
-
-        if (!coursesData || coursesData.length === 0) {
-          setIsLoading(false);
-          return;
-        }
-
-        // Get course details
-        const courseIds = coursesData.map(item => item.course_id);
-        const { data: fullCoursesData, error: fullCoursesError } = await supabase
-          .from('courses')
-          .select('*')
-          .in('id', courseIds);
-
-        if (fullCoursesError) {
-          console.error("Error fetching course details:", fullCoursesError);
-          return;
-        }
-
-        setUserCourses(fullCoursesData || []);
-      } catch (error) {
-        console.error("Error in fetchUserCourses:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserCourses();
-  }, [isAuthenticated, currentUser, navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleLogout = async () => {
     await logout();
     navigate("/login");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!examType || !semester || !course) {
-      toast({
-        title: "Incomplete form",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Navigate to the appropriate setup page based on exam type
-    if (examType === "CIE") {
-      navigate("/cie-exam-setup", { 
-        state: { examType, semester, course } 
-      });
-    } else if (examType === "SemesterEnd") {
-      navigate("/semester-exam-setup", {
-        state: { examType, semester, course }
-      });
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
   if (!currentUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Please log in to access this page.</p>
-      </div>
-    );
+    return <div className="p-8 text-center">Loading dashboard...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Exam-Scribe AI</h1>
-          <div className="flex items-center space-x-4">
-            <p className="text-sm text-gray-600">
-              Hi, <span className="font-medium">{currentUser.name}</span>
+    <div className="container mx-auto p-4 max-w-6xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">Welcome, {currentUser.name}</h1>
+          <p className="text-gray-600">Department of {currentUser.department} | {currentUser.semester}</p>
+        </div>
+        <div className="flex mt-4 md:mt-0 space-x-2">
+          <Button variant="outline" asChild>
+            <Link to="/profile" className="flex items-center gap-2">
+              <UserCircle className="w-4 h-4" />
+              Profile
+            </Link>
+          </Button>
+          <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarCheck className="w-5 h-5" />
+              CIE Exam Setup
+            </CardTitle>
+            <CardDescription>
+              Create Continuous Internal Evaluation exams
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">
+              Set up CIE exams for your courses with customizable question patterns and marks distribution.
             </p>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
+          </CardContent>
+          <CardFooter>
+            <Button asChild className="w-full">
+              <Link to="/cie-exam-setup">
+                Create CIE Exam
+              </Link>
             </Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Book className="w-5 h-5" />
+              Semester Exam Setup
+            </CardTitle>
+            <CardDescription>
+              Create end-of-semester examinations
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">
+              Configure semester-end exams with module-wise question distribution and comprehensive coverage.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button asChild className="w-full">
+              <Link to="/semester-exam-setup">
+                Create Semester Exam
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileQuestion className="w-5 h-5" />
+              Generate Questions
+            </CardTitle>
+            <CardDescription>
+              Generate AI-powered questions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">
+              Use AI to generate diverse questions based on course content, topics, and difficulty levels.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button asChild className="w-full">
+              <Link to="/generate-questions">
+                Generate Questions
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">Your Courses</h2>
+        {currentUser.courses && currentUser.courses.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {currentUser.courses.map((course) => (
+              <Card key={course}>
+                <CardContent className="p-4">
+                  <p className="font-medium">{course}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
-      </header>
-      
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="flex flex-col items-center justify-center">
-            <Card className="w-full max-w-md">
-              <CardHeader>
-                <CardTitle>Create Question Paper</CardTitle>
-                <CardDescription>
-                  Configure your exam settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="examType" className="text-sm font-medium">
-                      Exam Type
-                    </label>
-                    <Select
-                      value={examType}
-                      onValueChange={setExamType}
-                    >
-                      <SelectTrigger id="examType">
-                        <SelectValue placeholder="Select exam type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="CIE">Continuous Internal Evaluation (CIE)</SelectItem>
-                        <SelectItem value="SemesterEnd">Semester End Examination</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="semester" className="text-sm font-medium">
-                      Semester
-                    </label>
-                    <Select
-                      value={semester}
-                      onValueChange={setSemester}
-                    >
-                      <SelectTrigger id="semester">
-                        <SelectValue placeholder="Select semester" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                          <SelectItem key={sem} value={sem.toString()}>
-                            Semester {sem}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="course" className="text-sm font-medium">
-                      Course
-                    </label>
-                    <Select
-                      value={course}
-                      onValueChange={setCourse}
-                    >
-                      <SelectTrigger id="course">
-                        <SelectValue placeholder="Select course" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userCourses.map((course) => (
-                          <SelectItem key={course.id} value={course.code}>
-                            {course.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <Button type="submit" className="w-full mt-4">
-                    Continue
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </main>
+        ) : (
+          <p className="text-gray-500">No courses assigned yet.</p>
+        )}
+      </div>
     </div>
   );
 };
