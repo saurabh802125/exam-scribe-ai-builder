@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { authAPI } from "@/lib/api";
 
 interface Educator {
   id: string;
@@ -16,6 +17,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   register: (userData: RegisterData) => Promise<boolean>;
   logout: () => void;
+  loading: boolean;
 }
 
 interface RegisterData {
@@ -40,86 +42,52 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<Educator | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Check local storage for user data on initial load
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
-    }
+    // Check if user is already logged in
+    const checkAuthStatus = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          const response = await authAPI.getCurrentUser();
+          if (response.data) {
+            setCurrentUser(response.data);
+            setIsAuthenticated(true);
+          }
+        }
+      } catch (error) {
+        console.error("Auth status check failed:", error);
+        // Clear invalid token
+        localStorage.removeItem('authToken');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuthStatus();
   }, []);
 
-  // Mock login function (would connect to backend in real implementation)
   const login = async (email: string, password: string): Promise<boolean> => {
-    // In a real app, this would make an API call to verify credentials
-    // For now, we'll use mock data for demonstration
     try {
-      // Mock successful login for "test@example.com" with password "password"
-      if (email === "test@example.com" && password === "password") {
-        const user = {
-          id: "1",
-          name: "Test Educator",
-          email: "test@example.com",
-          department: "Computer Science",
-          semester: "4",
-          courses: ["ML", "ACN", "DBMS"]
-        };
-        
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        localStorage.setItem("user", JSON.stringify(user));
-        return true;
-      }
+      const response = await authAPI.login(email, password);
+      const { token, user } = response.data;
       
-      // Check localStorage for registered users
-      const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
-      const user = registeredUsers.find((u: any) => u.email === email && u.password === password);
+      // Save auth token
+      localStorage.setItem('authToken', token);
       
-      if (user) {
-        const userData = {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          department: user.department,
-          semester: user.semester,
-          courses: user.courses
-        };
-        
-        setCurrentUser(userData);
-        setIsAuthenticated(true);
-        localStorage.setItem("user", JSON.stringify(userData));
-        return true;
-      }
-      
-      return false;
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      return true;
     } catch (error) {
       console.error("Login error:", error);
       return false;
     }
   };
 
-  // Mock register function
   const register = async (userData: RegisterData): Promise<boolean> => {
     try {
-      // In a real app, this would make an API call to register the user
-      const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
-      
-      // Check if email already exists
-      if (registeredUsers.some((user: any) => user.email === userData.email)) {
-        return false;
-      }
-      
-      // Create new user with ID
-      const newUser = {
-        ...userData,
-        id: `user-${Date.now()}`
-      };
-      
-      // Add to registered users
-      registeredUsers.push(newUser);
-      localStorage.setItem("registeredUsers", JSON.stringify(registeredUsers));
-      
+      await authAPI.register(userData);
       return true;
     } catch (error) {
       console.error("Registration error:", error);
@@ -128,9 +96,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    authAPI.logout();
     setCurrentUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem("user");
   };
 
   const value = {
@@ -138,7 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated,
     login,
     register,
-    logout
+    logout,
+    loading
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

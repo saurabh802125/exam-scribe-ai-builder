@@ -5,88 +5,82 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import { coursesAPI } from "@/lib/api";
 
-const availableCourses = [
-  { id: "ML", name: "Machine Learning" },
-  { id: "ACN", name: "Advanced Computer Networks" },
-  { id: "DCN", name: "Data Communication Networks" },
-  { id: "DL", name: "Deep Learning" },
-  { id: "DS", name: "Data Structures" },
-  { id: "DBMS", name: "Database Management Systems" },
-  { id: "AI", name: "Artificial Intelligence" },
-  { id: "OS", name: "Operating Systems" },
-];
+interface Course {
+  _id: string;
+  name: string;
+  code: string;
+}
 
 const Register = () => {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    department: "",
-    semester: "",
-  });
+  const [step, setStep] = useState(1);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [department, setDepartment] = useState("");
+  const [semester, setSemester] = useState("");
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState("");
+  const [isLoadingCourses, setIsLoadingCourses] = useState(false);
   
   const { register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    
-    // Clear password error when typing in password fields
-    if (name === "password" || name === "confirmPassword") {
-      setPasswordError("");
-    }
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const toggleCourse = (courseId: string) => {
-    setSelectedCourses(prev => 
-      prev.includes(courseId)
-        ? prev.filter(id => id !== courseId)
-        : [...prev, courseId]
-    );
-  };
-
-  const validateForm = () => {
-    if (formData.password !== formData.confirmPassword) {
-      setPasswordError("Passwords do not match");
-      return false;
-    }
-    
-    if (formData.password.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
-      return false;
-    }
-    
-    if (selectedCourses.length === 0) {
+  // Fetch available courses when going to step 2
+  const goToStep2 = async () => {
+    if (!name || !email || !password) {
       toast({
-        title: "Course selection required",
-        description: "Please select at least one course",
+        title: "Missing information",
+        description: "Please fill in all fields to continue.",
         variant: "destructive",
       });
-      return false;
+      return;
     }
     
-    return true;
+    try {
+      setIsLoadingCourses(true);
+      const response = await coursesAPI.getAllCourses();
+      setAvailableCourses(response.data);
+      setStep(2);
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load courses. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingCourses(false);
+    }
+  };
+
+  const handleCourseToggle = (courseCode: string) => {
+    setSelectedCourses(prev => {
+      if (prev.includes(courseCode)) {
+        return prev.filter(code => code !== courseCode);
+      } else {
+        return [...prev, courseCode];
+      }
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!department || !semester || selectedCourses.length === 0) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all fields and select at least one course.",
+        variant: "destructive",
+      });
       return;
     }
     
@@ -94,24 +88,24 @@ const Register = () => {
 
     try {
       const success = await register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        department: formData.department,
-        semester: formData.semester,
+        name,
+        email,
+        password,
+        department,
+        semester,
         courses: selectedCourses,
       });
       
       if (success) {
         toast({
           title: "Registration successful",
-          description: "Your account has been created. Please login.",
+          description: "Your account has been created. You can now log in.",
         });
         navigate("/login");
       } else {
         toast({
           title: "Registration failed",
-          description: "This email may already be registered. Please try another.",
+          description: "Failed to create your account. Please try again.",
           variant: "destructive",
         });
       }
@@ -127,91 +121,92 @@ const Register = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 py-8">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <div className="w-full max-w-md p-4">
         <Card className="shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Create Educator Account</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">Exam-Scribe AI</CardTitle>
             <CardDescription className="text-center">
-              Sign up for Exam-Scribe AI
+              {step === 1 ? "Create an educator account" : "Complete your profile"}
             </CardDescription>
           </CardHeader>
           
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input 
-                  id="name"
-                  name="name"
-                  placeholder="John Doe" 
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email"
-                  name="email"
-                  type="email" 
-                  placeholder="your.email@example.com" 
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+            {step === 1 ? (
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="name">Full Name</Label>
                   <Input 
-                    id="password"
-                    name="password"
-                    type="password" 
-                    placeholder="••••••••" 
-                    value={formData.password}
-                    onChange={handleInputChange}
+                    id="name"
+                    type="text" 
+                    placeholder="John Doe" 
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input 
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password" 
-                    placeholder="••••••••" 
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
+                    id="email"
+                    type="email" 
+                    placeholder="your.email@example.com" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input 
+                    id="password"
+                    type="password" 
+                    placeholder="••••••••" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-gray-500">
+                    Password must be at least 6 characters long.
+                  </p>
+                </div>
+                
+                <Button 
+                  type="button" 
+                  className="w-full" 
+                  onClick={goToStep2}
+                  disabled={isLoadingCourses}
+                >
+                  {isLoadingCourses ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    "Continue"
+                  )}
+                </Button>
               </div>
-              
-              {passwordError && (
-                <p className="text-sm font-medium text-destructive">{passwordError}</p>
-              )}
-              
-              <div className="grid grid-cols-2 gap-4">
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="department">Department</Label>
                   <Select 
-                    onValueChange={(value) => handleSelectChange("department", value)}
-                    value={formData.department}
+                    value={department} 
+                    onValueChange={setDepartment}
+                    required
                   >
                     <SelectTrigger id="department">
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="CS">Computer Science</SelectItem>
-                      <SelectItem value="IT">Information Technology</SelectItem>
-                      <SelectItem value="EC">Electronics & Communication</SelectItem>
-                      <SelectItem value="ME">Mechanical Engineering</SelectItem>
-                      <SelectItem value="CE">Civil Engineering</SelectItem>
+                      <SelectItem value="Computer Science">Computer Science</SelectItem>
+                      <SelectItem value="Information Technology">Information Technology</SelectItem>
+                      <SelectItem value="Electronics">Electronics</SelectItem>
+                      <SelectItem value="Mechanical">Mechanical</SelectItem>
+                      <SelectItem value="Civil">Civil</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -219,51 +214,79 @@ const Register = () => {
                 <div className="space-y-2">
                   <Label htmlFor="semester">Semester</Label>
                   <Select 
-                    onValueChange={(value) => handleSelectChange("semester", value)}
-                    value={formData.semester}
+                    value={semester} 
+                    onValueChange={setSemester}
+                    required
                   >
                     <SelectTrigger id="semester">
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder="Select semester" />
                     </SelectTrigger>
                     <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
-                        <SelectItem key={sem} value={sem.toString()}>
-                          Semester {sem}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="1">Semester 1</SelectItem>
+                      <SelectItem value="2">Semester 2</SelectItem>
+                      <SelectItem value="3">Semester 3</SelectItem>
+                      <SelectItem value="4">Semester 4</SelectItem>
+                      <SelectItem value="5">Semester 5</SelectItem>
+                      <SelectItem value="6">Semester 6</SelectItem>
+                      <SelectItem value="7">Semester 7</SelectItem>
+                      <SelectItem value="8">Semester 8</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Courses</Label>
-                <div className="grid grid-cols-2 gap-2 border rounded-md p-3">
-                  {availableCourses.map(course => (
-                    <div key={course.id} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`course-${course.id}`}
-                        checked={selectedCourses.includes(course.id)}
-                        onCheckedChange={() => toggleCourse(course.id)}
-                      />
-                      <label 
-                        htmlFor={`course-${course.id}`}
-                        className="text-sm cursor-pointer"
-                      >
-                        {course.name}
-                      </label>
-                    </div>
-                  ))}
+                
+                <div className="space-y-2">
+                  <Label>Select Courses</Label>
+                  <div className="border rounded-md p-4 space-y-2">
+                    {availableCourses.map((course) => (
+                      <div key={course._id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`course-${course.code}`}
+                          checked={selectedCourses.includes(course.code)}
+                          onCheckedChange={() => handleCourseToggle(course.code)}
+                        />
+                        <Label htmlFor={`course-${course.code}`} className="flex-1">
+                          {course.name} ({course.code})
+                        </Label>
+                      </div>
+                    ))}
+                    {availableCourses.length === 0 && (
+                      <p className="text-sm text-gray-500">No courses available</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Please select at least one course that you teach.
+                  </p>
                 </div>
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Create Account"}
-              </Button>
-            </form>
+                
+                <div className="pt-4 flex space-x-2">
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => setStep(1)}
+                    className="flex-1"
+                  >
+                    Back
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="flex-1"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Registering...
+                      </>
+                    ) : (
+                      "Register"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            )}
           </CardContent>
           
-          <CardFooter className="flex justify-center">
+          <CardFooter className="flex flex-col space-y-2">
             <div className="text-sm text-center">
               Already have an account?{" "}
               <Link to="/login" className="text-primary hover:underline">

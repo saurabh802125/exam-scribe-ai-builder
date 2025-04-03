@@ -1,73 +1,77 @@
-# Welcome to your Lovable project
 
-## Project info
+# Exam-Scribe AI
 
-**URL**: https://lovable.dev/projects/b18e4706-ab71-4439-917f-2c3fc6bbd754
+An AI-powered application for educators to create and manage exam questions.
 
-## How can I edit this code?
+## Project Structure
 
-There are several ways of editing your application.
+This is a MERN (MongoDB, Express, React, Node.js) application with:
 
-**Use Lovable**
+- **Frontend**: React with TypeScript, Vite, Tailwind CSS, and Shadcn UI
+- **Backend**: Node.js with Express and MongoDB
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b18e4706-ab71-4439-917f-2c3fc6bbd754) and start prompting.
+## Setup Instructions
 
-Changes made via Lovable will be committed automatically to this repo.
+### Frontend
 
-**Use your preferred IDE**
+1. Install dependencies:
+   ```
+   npm install
+   ```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+2. Create a `.env` file with the following variables:
+   ```
+   VITE_API_BASE_URL=http://localhost:5000/api
+   ```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+3. Start the development server:
+   ```
+   npm run dev
+   ```
 
-Follow these steps:
+### Backend
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. Navigate to the server directory:
+   ```
+   cd server
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. Create a `.env` file with the following variables:
+   ```
+   PORT=5000
+   MONGODB_URI=mongodb://localhost:27017/exam-scribe-ai
+   JWT_SECRET=your_jwt_secret_key
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+4. Initialize the database with default courses:
+   ```
+   node scripts/initDb.js
+   ```
 
-**Edit a file directly in GitHub**
+5. Start the server:
+   ```
+   npm run dev
+   ```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Features
 
-**Use GitHub Codespaces**
+- User authentication (register, login, profile management)
+- Course management
+- Exam setup (CIE and Semester exams)
+- Question generation with AI
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Available Scripts
 
-## What technologies are used for this project?
+### Frontend
+- `npm run dev` - Start the development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build locally
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/b18e4706-ab71-4439-917f-2c3fc6bbd754) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes it is!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Backend
+- `npm run dev` - Start the development server with nodemon
+- `npm start` - Start the production server
