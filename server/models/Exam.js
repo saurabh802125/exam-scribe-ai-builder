@@ -7,6 +7,13 @@ const examSchema = new mongoose.Schema({
     ref: 'Educator',
     required: true
   },
+  title: {
+    type: String,
+    required: true,
+    default: function() {
+      return `${this.examType} - ${this.semester}`;
+    }
+  },
   examType: {
     type: String,
     required: true,
@@ -20,6 +27,26 @@ const examSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course',
     required: true
+  },
+  totalMarks: {
+    type: Number,
+    default: 0
+  },
+  duration: {
+    type: Number, // in minutes
+    default: 60
+  },
+  instructions: {
+    type: String,
+    default: 'Answer all questions. Each question carries marks as indicated.'
+  },
+  status: {
+    type: String,
+    enum: ['DRAFT', 'FINALIZED', 'PUBLISHED'],
+    default: 'DRAFT'
+  },
+  examDate: {
+    type: Date
   },
   createdAt: {
     type: Date,

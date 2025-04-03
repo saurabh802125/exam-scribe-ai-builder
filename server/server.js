@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const authRoutes = require('./routes/auth');
 const coursesRoutes = require('./routes/courses');
 const examsRoutes = require('./routes/exams');
+const questionsRoutes = require('./routes/questions');
 
 // Initialize express app
 const app = express();
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/exams', examsRoutes);
+app.use('/api/questions', questionsRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
