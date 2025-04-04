@@ -9,7 +9,7 @@ const router = express.Router();
 // @route   GET /api/courses
 // @desc    Get all courses
 // @access  Private
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const courses = await Course.find().sort({ name: 1 });
     res.json(courses);

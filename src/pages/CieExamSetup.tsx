@@ -42,6 +42,7 @@ const CieExamSetup = () => {
     { questionId: "3c", level: "hard", marks: 5, includeC: true },
   ]);
   
+
   const [numQuestions, setNumQuestions] = useState<number>(5); // Default number of questions to generate
 
   useEffect(() => {
@@ -52,8 +53,9 @@ const CieExamSetup = () => {
     
     // Get data passed from the dashboard
     const state = location.state as { examType: string; semester: string; course: string } | null;
-    
+    console.log("Location state:", location.state);
     if (!state) {
+
       toast({
         title: "Error",
         description: "No exam configuration provided",

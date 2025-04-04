@@ -117,7 +117,7 @@ const Dashboard = () => {
             </CardContent>
             <CardFooter>
               <Button variant="outline" className="w-full" onClick={() => navigate("/semester-exam-setup")}>
-                Manage Courses
+                SEE EXAM
               </Button>
             </CardFooter>
           </Card>
@@ -146,7 +146,7 @@ const Dashboard = () => {
             </CardContent>
             <CardFooter>
               <Button variant="outline" className="w-full" onClick={() => navigate("/cie-exam-setup")}>
-                Create Exam
+                CIE Exam
               </Button>
             </CardFooter>
           </Card>

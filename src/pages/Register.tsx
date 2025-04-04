@@ -45,6 +45,7 @@ const Register = () => {
       return;
     }
     
+    
     try {
       setIsLoadingCourses(true);
       const response = await coursesAPI.getAllCourses();
@@ -139,7 +140,7 @@ const Register = () => {
                   <Input 
                     id="name"
                     type="text" 
-                    placeholder="John Doe" 
+                    placeholder="Enter your name" 
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
@@ -151,7 +152,7 @@ const Register = () => {
                   <Input 
                     id="email"
                     type="email" 
-                    placeholder="your.email@example.com" 
+                    placeholder="Saurabhkumar@gmail.com" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -257,6 +258,8 @@ const Register = () => {
                     Please select at least one course that you teach.
                   </p>
                 </div>
+
+                
                 
                 <div className="pt-4 flex space-x-2">
                   <Button 
